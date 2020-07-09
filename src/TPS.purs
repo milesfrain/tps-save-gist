@@ -61,6 +61,7 @@ component =
         -- Cannot just use `content` - will be stale
         currentContent <- HK.get contentIdx
         log $ "saving gist, content: " <> show currentContent
+        log $ "example of stale content: " <> show content
         eitherId <- liftAff $ ghCreateGist gh_token $ currentContent
         case eitherId of
           Left err -> log err

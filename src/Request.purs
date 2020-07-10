@@ -5,13 +5,14 @@ import Affjax as AX
 import Affjax.RequestBody as AXRB
 import Affjax.RequestHeader as AXRH
 import Affjax.ResponseFormat as AXRF
-import Common (AuthCode(..), Content(..), GistID(..), GhToken(..), tokenServerUrl)
+import Common (AuthCode(..), Content(..), GhToken(..), GistID(..), compileUrl, tokenServerUrl)
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Argonaut.Core as J
 import Data.Either (Either(..))
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
+import Effect.Class.Console (log)
 
 type TokenResp
   = { access_token :: String }

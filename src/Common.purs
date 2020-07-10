@@ -34,6 +34,15 @@ clientID :: String
 --clientID = "bbaa8fdc61cceb40c899" -- gh
 clientID = "6f4e10fd8cef6995ac09" -- local
 
+compileUrl :: String
+--compileUrl = "https://compile.purescript.org"
+compileUrl = "http://localhost:8081"
+
+loaderUrl :: String
+--loaderUrl = "https://compile.purescript.org/output"
+--loaderUrl = "js/output"
+loaderUrl = "http://localhost:8080"
+
 newtype AuthCode
   = AuthCode String
 

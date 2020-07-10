@@ -1,19 +1,27 @@
 module TPS where
 
 import Prelude
+
 import Ace (Document)
 import Ace as Ace
 import Ace.Document as Document
 import Ace.EditSession as Session
 import Ace.Editor as Editor
-import Classes (commonMenuClasses, dropdownItemClasses, menuTextClasses)
+import Classes (commonMenuClasses, commonTextClasses, dropdownItemClasses, menuTextClasses)
 import Common (Content(..), GhToken, GistID(..), appRootWithSlash, imgPrefix)
+import Compile (CompileResult(..), compile)
+import Data.Argonaut (encodeJson, stringify)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
+import Data.String (Pattern(..), Replacement(..), replace, replaceAll)
 import Data.Tuple.Nested ((/\))
+import Debug.Trace (spy)
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class.Console (log)
+import Effect.Class.Console (log, logShow)
+import Foreign.Object (fromFoldable, size)
+import Foreign.Object as Object
 import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
@@ -23,10 +31,14 @@ import Halogen.Hooks (useState)
 import Halogen.Hooks as HK
 import Halogen.Query.EventSource as ES
 import HooksHelper (onClickNoPropagation)
+import LzString (compressToEncodedURIComponent)
 import MyHooksExtra (useModifyState_, usePutState)
 import MyRouting (MyRoute(..))
+import Output (postMessage)
 import Request (ghCreateGist, ghGetGist, ghRequestToken)
 import Tailwind as T
+import Try.Loader (Loader(..), makeLoader, runLoader)
+import Try.Types (JS(..))
 import UseWindowClick (useWindowClick)
 import Utility (GistStatus(..), PushRoute, ViewMode(..), compress, decompress, ghAuthorize)
 
@@ -37,6 +49,19 @@ type Input
 data Query a
   = Nav MyRoute a
 
+-- This is required for good caching performance
+loader :: Loader
+loader = makeLoader
+
+{-
+iframeActive :: String
+iframeActive = "../frame.html"
+
+iframeClear ::String
+iframeClear = "about:blank"
+-}
+
+iframeLoadingSplash = "<p>Loading...</p>"
 component :: forall o m. MonadAff m => H.Component HH.HTML Query Input o m
 component =
   -- No tokens for child slots or output
@@ -52,6 +77,7 @@ component =
     ghToken /\ putGhToken <- usePutState (Nothing :: Maybe GhToken)
     pushRoute /\ putPushRoute <- usePutState (input :: PushRoute)
     gistID /\ putGistID <- usePutState (NoGist :: GistStatus)
+    iframeSrc /\ putIframeSrc <- usePutState iframeLoadingSplash
     --
     -- Helper functions to reduce code duplication
     let
@@ -70,12 +96,24 @@ component =
 
       -- update content in editor and state
       writeContent (Content ct) = do
-        log $ "writing content: " <> ct
+        --log $ "writing content: " <> ct
         HK.put contentIdx $ Content ct
         liftEffect $ traverse_ (Document.setValue ct) document
+
     --
     -- Initialize Ace editor and subscribe to text changes
     HK.useLifecycleEffect do
+
+      {-
+      log "startup"
+      let obj = fromFoldable [
+        "foo" /\ JS "foo thing"
+        , "bar" /\ JS "bar thing"
+      ]
+      let jsonStr = stringify $ encodeJson obj
+      putIframeSrc $ "<script src='../frame-load.js'> console.log('Calling loadFrame'); loadFrame('" <> jsonStr <> "'); </script>"
+      -}
+
       doc <-
         liftEffect do
           -- Create an editor
@@ -133,7 +171,7 @@ component =
         LoadCompressed compressed -> do
           let
             ct = decompress compressed
-          log $ "Got content from url: " <> show ct
+          --log $ "Got content from url: " <> show ct
           writeContent ct
         LoadGist gist_id -> do
           eitherContent <- liftAff $ ghGetGist gist_id
@@ -141,7 +179,7 @@ component =
             ct = case eitherContent of
               Left err -> Content $ "Failed to load Gist\nLikely missing\n" <> err
               Right c -> c
-          log $ "Got content from gist: " <> show ct
+          --log $ "Got content from gist: " <> show ct
           writeContent ct
           putGistID $ HaveGist gist_id
       -- Required response boilerplate for query
@@ -161,7 +199,8 @@ component =
           ]
           [ HH.a
               --[ HP.href "/"
-              [ HP.href $ appRootWithSlash <> "/?gist=6e49291fd9e7bac1bc5c811c93e072f3"
+              --[ HP.href $ appRootWithSlash <> "/?gist=6e49291fd9e7bac1bc5c811c93e072f3"
+              [ HP.href $ appRootWithSlash <> "/?gist=429eab1e957e807f9feeddbf4f573dd0"
               , HP.title "Try PureScript!"
               , HP.classes commonMenuClasses
               ]
@@ -188,7 +227,23 @@ component =
               "Compile"
               "Compile Now"
               true -- close dropdown
-              $ log "compiling"
+              $ do
+                  putIframeSrc iframeLoadingSplash
+                  (res :: Either String CompileResult) <- liftAff $ compile content
+                  --logShow res
+                  case res of
+                    Right (CompileSuccess cs) -> do
+                      -- Get JS source files for all included modules
+                      obj <- liftAff $ runLoader loader $ JS cs.js
+                      -- Compress source file contents.
+                      -- This avoids non-trivial HTML + JSON string escaping
+                      let objcomp = map (unwrap >>> compressToEncodedURIComponent) obj
+                      -- Convert object to JSON string
+                      let jsonStr = stringify $ encodeJson objcomp
+                      -- Setup iframe and pass JS files to execute.
+                      putIframeSrc $ "<script src='../frame-load.js'> loadFrame('" <> jsonStr <> "'); </script>"
+                    Right _ -> log "compile failure"
+                    Left err -> log $ "bad result: " <> err
           , mkToggleButton
               "Auto-Compile"
               "Compile on code changes"
@@ -281,11 +336,29 @@ component =
       HH.div [ HP.classes [ T.flex, T.flexCol, T.hScreen ] ]
         [ menu
         , HH.div
-            [ HP.classes [ T.flexGrow, T.bgRed200 ]
-            , HP.id_ "editor"
+            [ HP.classes [ T.flex, T.flexGrow, T.flexRow, T.spaceX1 ] ]
+            [ HH.div
+                [ HP.classes [ T.flexGrow, T.bgRed200 ]
+                , HP.id_ "editor"
+                ]
+                []
+            , HH.iframe
+                [ sandbox "allow-scripts"
+                --, HP.src "../frame.html"
+                , HP.src "../frame-error.html"
+                --, srcDoc "<p>Hello world!</p>"
+                , srcDoc iframeSrc
+                  -- w0 necessary to keep flex basis
+                , HP.classes [ T.flexGrow, T.bgBlue200, T.w0 ]
+                ]
             ]
-            []
         , HH.div
             [ HP.classes [ T.bgGreen200 ] ]
-            [ HH.text $ "bottom: " <> show content ]
+            [ HH.text "bottom" ]
         ]
+
+sandbox :: forall r i. String -> HH.IProp ( sandbox :: String | r ) i
+sandbox = HH.prop (HH.PropName "sandbox")
+
+srcDoc :: forall r i. String -> HH.IProp ( srcDoc :: String | r ) i
+srcDoc = HH.prop (HH.PropName "srcdoc")

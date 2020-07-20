@@ -1,25 +1,13 @@
 {
   "license": "MIT",
   "devDependencies": {
-    "cssnano": "^4.1.10",
-    "parcel": "^1.12.4",
-    "purescript": "^0.13.8",
-    "spago": "^0.15.2",
-    "tailwindcss": "^1.4.6"
+    "parcel": "^1.12.4"
   },
   "scripts": {
     "build": "spago build",
-    "serve": "npm run prep-dist && parcel dev/index.html --open",
-    "prep-dist": "rm -rf dist && mkdir dist && cp -r dev/img dist",
-    "prep-prod": "npm run prep-dist && rm -rf prod && cp -r dev prod",
-    "bundle": "spago bundle-app --to prod/index.js",
-    "build-prod": "npm run prep-prod && spago bundle-app --to prod/index.js && parcel build prod/index.html",
-    "gen-css": "tailwindcss build css/tailwind_inputs.css -o dev/tailwind.css && cat dev/tailwind.css | ./css/css2purs.py > src/Tailwind.purs",
-    "css-purge": "NODE_ENV=production tailwindcss build css/tailwind_inputs.css -o prod/tailwind.css",
-    "lock-css": "npm run bundle && npm run css-purge && cat prod/tailwind.css | ./css/css2purs.py > src/Tailwind.purs"
+    "serve": "parcel dev/index.html --open"
   },
   "dependencies": {
-    "ace-builds": "^1.4.11",
-    "lz-string": "^1.4.4"
+    "ace-builds": "^1.4.11"
   }
 }

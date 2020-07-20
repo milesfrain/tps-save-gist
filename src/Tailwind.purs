@@ -7,37 +7,13 @@ import Halogen.HTML.Core (ClassName(..))
 container :: ClassName
 container = ClassName "container"
 
--- | bg-red-200
-bgRed200 :: ClassName
-bgRed200 = ClassName "bg-red-200"
+-- | bg-gray-200
+bgGray200 :: ClassName
+bgGray200 = ClassName "bg-gray-200"
 
 -- | bg-green-200
 bgGreen200 :: ClassName
 bgGreen200 = ClassName "bg-green-200"
-
--- | bg-tps-black
-bgTpsBlack :: ClassName
-bgTpsBlack = ClassName "bg-tps-black"
-
--- | hover:bg-black
-hoverBgBlack :: ClassName
-hoverBgBlack = ClassName "hover:bg-black"
-
--- | border-gray-700
-borderGray700 :: ClassName
-borderGray700 = ClassName "border-gray-700"
-
--- | border-solid
-borderSolid :: ClassName
-borderSolid = ClassName "border-solid"
-
--- | border-l
-borderL :: ClassName
-borderL = ClassName "border-l"
-
--- | block
-block :: ClassName
-block = ClassName "block"
 
 -- | flex
 flex :: ClassName
@@ -58,39 +34,3 @@ flexGrow = ClassName "flex-grow"
 -- | h-screen
 hScreen :: ClassName
 hScreen = ClassName "h-screen"
-
--- | leading-10
-leading10 :: ClassName
-leading10 = ClassName "leading-10"
-
--- | px-3
-px3 :: ClassName
-px3 = ClassName "px-3"
-
--- | absolute
-absolute :: ClassName
-absolute = ClassName "absolute"
-
--- | relative
-relative :: ClassName
-relative = ClassName "relative"
-
--- | text-white
-textWhite :: ClassName
-textWhite = ClassName "text-white"
-
--- | text-tps-disabled
-textTpsDisabled :: ClassName
-textTpsDisabled = ClassName "text-tps-disabled"
-
--- | text-tps-enabled
-textTpsEnabled :: ClassName
-textTpsEnabled = ClassName "text-tps-enabled"
-
--- | w-full
-wFull :: ClassName
-wFull = ClassName "w-full"
-
--- | z-10
-z10 :: ClassName
-z10 = ClassName "z-10"

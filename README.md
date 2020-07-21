@@ -1,4 +1,4 @@
-Demo of ace editor issues in simple webpack project
+Demo of ace editor working in simple webpack project
 
 ```
 npm i

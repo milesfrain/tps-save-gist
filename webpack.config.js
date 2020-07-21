@@ -6,7 +6,11 @@ const webpack = require('webpack');
 module.exports = {
   mode: 'development',
   entry: {
-    'index.js': './dev/index.js',
+    "index.js": [
+      require.resolve("ace-builds/src-noconflict/ace.js"),
+     "./dev/tailwind.css",
+     "./dev/index.js",
+    ],
   },
   devtool: false,
   devServer: {
@@ -17,20 +21,16 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Ace Demo',
     }),
-    new webpack.ProvidePlugin({
-      ace: require.resolve('ace-builds/src-noconflict/ace.js'),
-    }),
   ],
   module: {
     rules: [
       {
-        test: require.resolve('ace-builds/src-noconflict/ace.js'),
-        loader: 'exports-loader',
-        options: {
-          type: 'commonjs',
-          exports: 'single window.ace'
-        }
-      }
+        test: /\.css$/,
+        use: [
+          'style-loader',
+          'css-loader',
+        ],
+      },
     ],
   },
   output: {

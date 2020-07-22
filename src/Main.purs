@@ -25,6 +25,8 @@ import Halogen.Hooks as HK
 import Halogen.Query.EventSource as ES
 import Tailwind as T
 
+foreign import imgFaviconWhite :: String
+
 main :: Effect Unit
 main =
   HA.runHalogenAff do
@@ -64,7 +66,7 @@ component =
     HK.pure do
       HH.div [ HP.classes [ T.flex, T.flexCol, T.hScreen ] ]
         [ HH.img
-            [ HP.src "./img/favicon-white.svg"
+            [ HP.src imgFaviconWhite
             , HP.width 40
             , HP.width 40
             ]

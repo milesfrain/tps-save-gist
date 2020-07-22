@@ -63,7 +63,12 @@ component =
     -- Render
     HK.pure do
       HH.div [ HP.classes [ T.flex, T.flexCol, T.hScreen ] ]
-        [ HH.button
+        [ HH.img
+            [ HP.src "./img/favicon-white.svg"
+            , HP.width 40
+            , HP.width 40
+            ]
+        , HH.button
             [ HP.classes [ T.bgGreen200 ]
             -- Clear editor content
             , HE.onClick \_ ->

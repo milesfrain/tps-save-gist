@@ -1,4 +1,4 @@
-Demo of ace editor working in simple webpack project
+Need help adding images to webpack project
 
 ```
 npm i

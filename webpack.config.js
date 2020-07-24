@@ -9,6 +9,7 @@ module.exports = {
   entry: {
     "index.js": [
       require.resolve("ace-builds/src-noconflict/ace.js"),
+      require.resolve("ace-builds/webpack-resolver.js"),
      "./dev/tailwind.css",
      "./dev/index.js",
     ],

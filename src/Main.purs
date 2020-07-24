@@ -2,10 +2,6 @@ module Main where
 
 import Prelude
 
-import Effect (Effect)
-import Halogen.Aff as HA
-import Halogen.VDom.Driver (runUI)
-
 import Ace (Document)
 import Ace as Ace
 import Ace.Document as Document
@@ -14,15 +10,18 @@ import Ace.Editor as Editor
 import Data.Foldable (traverse_)
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
+import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class.Console (log)
 import Halogen (liftEffect)
 import Halogen as H
+import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks as HK
 import Halogen.Query.EventSource as ES
+import Halogen.VDom.Driver (runUI)
 import Tailwind as T
 
 main :: Effect Unit
@@ -43,6 +42,7 @@ component =
           -- Create an editor
           editor <- Ace.edit "editor" Ace.ace
           session <- Editor.getSession editor
+          Session.setMode "ace/mode/haskell" session
           docInner <- Session.getDocument session
           pure docInner
       -- Handle changes within editor

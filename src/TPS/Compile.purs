@@ -1,10 +1,11 @@
-module Compile where
+module TPS.Compile where
 
 import Prelude
+import Ace (Range)
+import Ace.Range as Range
 import Affjax as AX
 import Affjax.RequestBody as AXRB
 import Affjax.ResponseFormat as AXRF
-import Common (Content(..), compileUrl)
 import Control.Alternative ((<|>))
 import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Argonaut.Core as J
@@ -14,8 +15,10 @@ import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
+import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Class.Console (log, logShow)
+import TPS.Common (Content(..))
+import TPS.Config (compileUrl)
 
 ------- Compile API types -------
 --
@@ -118,3 +121,70 @@ compile (Content ct) = do
           case decodeJson response.body of
             Left err -> Left $ "Failed to decode json response: " <> respStr <> ", Error: " <> show err
             Right (decoded :: CompileResult) -> Right decoded
+
+------  generate errors for editor --------------
+-- Todo - move this to another file
+type Annotation
+  = { row :: Int
+    , column :: Int
+    , type :: String
+    , text :: String
+    }
+
+-- | Set the gutter annotations
+--foreign import setAnnotations :: EffectFn1 (Array Annotation) Unit
+data AnnotationType
+  = AnnotateWarning
+  | AnnotateError
+
+instance showAnnotationType :: Show AnnotationType where
+  show AnnotateWarning = "warning"
+  show AnnotateError = "error"
+
+-- Common fields of CompileWarning and CompilerError
+-- Todo - should both of these have `er` ending?
+type WarningOrError r
+  = { message :: String
+    , position :: Maybe ErrorPosition
+    | r
+    }
+
+-- Creates an annotation from a warning or error,
+-- but only if there's a position.
+toAnnotation :: forall r. AnnotationType -> WarningOrError r -> Maybe Annotation
+toAnnotation _ { position: Nothing } = Nothing
+
+toAnnotation annType { position: Just pos, message } =
+  Just
+    { row: pos.startLine - 1
+    , column: pos.startColumn - 1
+    , type: show annType
+    , text: message
+    }
+
+-- Make sure position's range is at least one character wide.
+nonZeroRange :: ErrorPosition -> ErrorPosition
+nonZeroRange p =
+  if p.startLine == p.endLine && p.endColumn <= p.startColumn then
+    if p.startColumn > 0 then
+      p { startColumn = p.endColumn - 1 }
+    else
+      p { endColumn = p.startColumn + 1 }
+  else
+    p
+
+-- Creates a Range for making Markers from a warning or error,
+-- but only if there's a position.
+mkMarkerRange :: forall r. WarningOrError r -> Effect (Maybe Range)
+mkMarkerRange { position: Nothing } = pure Nothing
+
+mkMarkerRange { position: Just p0 } = do
+  let
+    p = nonZeroRange p0
+  rg <-
+    Range.create
+      (p.startLine - 1)
+      (p.startColumn - 1)
+      (p.endLine - 1)
+      (p.endColumn - 1)
+  pure $ Just rg

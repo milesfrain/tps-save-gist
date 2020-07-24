@@ -1,19 +1,24 @@
-module Request where
+module TPS.Request where
 
 import Prelude
 import Affjax as AX
 import Affjax.RequestBody as AXRB
 import Affjax.RequestHeader as AXRH
 import Affjax.ResponseFormat as AXRF
-import Common (AuthCode(..), Content(..), GhToken(..), GistID(..), compileUrl, tokenServerUrl)
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Argonaut.Core as J
 import Data.Either (Either(..))
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
-import Effect.Class.Console (log)
+import TPS.Common (AuthCode(..), Content(..), GhToken(..), GistID(..))
+import TPS.Config (tokenServerUrl)
 
+{-
+Handles HTTP requests for fetching github files and gists,
+and saving gists.
+-}
+--
 type TokenResp
   = { access_token :: String }
 
@@ -72,6 +77,14 @@ ghGetGist (GistID gistID) = do
           case decodeJson response.body of
             Left err -> Left $ "Failed to decode json response: " <> respStr <> ", Error: " <> show err
             Right (decoded :: GistJson) -> Right $ getGistContent decoded
+
+getFile :: String -> Aff (Either String Content)
+getFile url = do
+  result <- AX.get AXRF.string url
+  pure
+    $ case result of
+        Left err -> Left $ "Failed to get file at: " <> url <> ", " <> AX.printError err
+        Right response -> Right $ Content response.body
 
 ghCreateGist :: GhToken -> Content -> Aff (Either String GistID)
 ghCreateGist token content = do

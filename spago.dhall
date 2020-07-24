@@ -10,17 +10,16 @@ You can edit this file as you like.
   , "argonaut-generic"
   , "console"
   , "css"
-  , "debug"
   , "effect"
   , "halogen"
   , "halogen-css"
   , "halogen-hooks"
   , "halogen-hooks-extra"
-  , "memoize"
+  , "interpolate"
   , "node-path"
   , "psci-support"
   , "routing"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources = [ "src/**/*.purs" ]
 }

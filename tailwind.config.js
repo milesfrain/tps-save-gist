@@ -1,7 +1,7 @@
 // tailwind.config.js
 module.exports = {
   purge: [
-    './prod/index.js',
+    './public/index.js',
   ],
   theme: {
     extend: {

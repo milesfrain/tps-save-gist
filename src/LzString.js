@@ -1,7 +1,5 @@
 "use strict";
 
-var LZString = require('lz-string');
-
 exports.compressToEncodedURIComponent = function (input) {
   return LZString.compressToEncodedURIComponent(input);
 }

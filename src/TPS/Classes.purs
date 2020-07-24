@@ -1,8 +1,25 @@
-module Classes where
+module TPS.Classes where
 
 import Prelude
 import Halogen (ClassName)
 import Tailwind as T
+
+{-
+Groups of Tailwind CSS classes
+-}
+--
+data Responsiveness
+  = NonMobile
+  | MobileOnly
+  | RenderAlways
+
+nonMobileBlockClasses :: Array ClassName
+nonMobileBlockClasses = [ T.hidden, T.smBlock ]
+
+nonMobileBlock :: Responsiveness -> Array ClassName
+nonMobileBlock NonMobile = nonMobileBlockClasses
+
+nonMobileBlock _ = []
 
 commonBgClasses :: Array ClassName
 commonBgClasses =

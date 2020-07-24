@@ -1,9 +1,15 @@
-module Try.Shim where
+module TPS.Shim where
 
 import Data.Tuple (Tuple(..))
 import Foreign.Object (Object)
 import Foreign.Object as Object
 
+{-
+Allows loading additional dependencies, which are required by
+some libraries.
+Feel free to add additional entries to this file.
+-}
+--
 type Shim
   = { url :: String
     , deps :: Array String

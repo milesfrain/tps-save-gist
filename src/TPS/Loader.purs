@@ -1,19 +1,14 @@
-module Try.Loader where
+module TPS.Loader where
 
 import Prelude
-
 import Affjax as AX
 import Affjax.ResponseFormat as AXRF
-import Common (loaderUrl)
+import TPS.Config (loaderUrl)
 import Control.Bind (bindFlipped)
-import Control.Monad.Cont (ContT(..))
-import Control.Monad.Except (ExceptT(..))
 import Control.Parallel (parTraverse)
 import Data.Array as Array
 import Data.Array.NonEmpty as NonEmpty
 import Data.Either (Either(..))
-import Data.Function.Memoize (memoize)
-import Data.Map (Map)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (unwrap)
 import Data.String (Pattern(..))
@@ -26,15 +21,18 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log, logShow)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
 import Effect.Unsafe (unsafePerformEffect)
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import Try.Shim (shims)
-import Try.Types (JS(..))
+import TPS.Shim (shims)
+import TPS.Types (JS(..))
 
+{-
+Collects all JS modules required by compled code.
+-}
+--
 type Module
   = { name :: String
     , path :: Maybe String
@@ -56,7 +54,6 @@ dirname path =
   fromMaybe "" do
     ix <- String.lastIndexOf (Pattern "/") path
     pure $ String.take ix path
-
 
 resolvePath :: String -> String -> Maybe String
 resolvePath a b
@@ -82,7 +79,6 @@ parseDeps current = Array.mapMaybe go <<< String.split (Pattern "\n") <<< unwrap
             , path: Nothing
             }
 
-
 {-
 Notes
 
@@ -93,8 +89,8 @@ Assuming makeLoader runLoader pattern is to save
 cache between calls to runLoader.
 
 -}
-
-newtype Loader = Loader (JS -> Aff (Object JS))
+newtype Loader
+  = Loader (JS -> Aff (Object JS))
 
 runLoader :: Loader -> JS -> Aff (Object JS)
 runLoader (Loader k) js = do
@@ -121,45 +117,45 @@ makeLoader = Loader (go Object.empty <<< parseDeps "<file>")
     case cached of
       Just mod -> pure mod
       Nothing -> do
-        mod <-
-          case path of
-            -- Path means dependency is another file
-            Just path' -> do
-              let
-                url = loaderUrl <> "/" <> path'
-              --log $ "get: " <> url
-              res <- AX.get AXRF.string url
+        mod <- case path of
+          -- Path means dependency is another file
+          Just path' -> do
+            let
+              url = loaderUrl <> "/" <> path'
+            --log $ "get: " <> url
+            res <- AX.get AXRF.string url
+            case res of
+              Left err -> pure { name, path, deps: [], src }
+                where
+                src = throwJSError $ "Could not get file " <> url <> ", " <> AX.printError err
+              Right { body } -> do
+                --log $ "got body:\n" <> body
+                pure { name, path, deps: parseDeps name src, src }
+                where
+                src = JS $ body <> "\n//# sourceURL=" <> path'
+          -- No path means dependency is a shim
+          Nothing -> case Object.lookup name shims of
+            Just shim -> do
+              res <- AX.get AXRF.string shim.url
               case res of
                 Left err -> pure { name, path, deps: [], src }
                   where
-                  src = throwJSError $ "Could not get file " <> url <> ", " <> AX.printError err
-                Right { body } -> do
-                  --log $ "got body:\n" <> body
-                  pure { name, path, deps: parseDeps name src, src }
+                  src = throwJSError $ "Could not get shim " <> name <> " at " <> shim.url <> ", " <> AX.printError err
+                Right { body } -> pure { name, path, deps, src }
                   where
-                  src = JS $ body <> "\n//# sourceURL=" <> path'
-            -- No path means dependency is a shim
-            Nothing -> case Object.lookup name shims of
-              Just shim -> do
-                res <- AX.get AXRF.string shim.url
-                case res of
-                  Left err -> pure { name, path, deps: [], src }
-                    where
-                    src = throwJSError $ "Could not get shim " <> name <> " at " <> shim.url <> ", " <> AX.printError err
-                  Right { body } -> pure { name, path, deps, src }
-                    where
-                    src = JS $ body <> "\n//# sourceURL=" <> shim.url
+                  src = JS $ body <> "\n//# sourceURL=" <> shim.url
 
-                    deps = { name: _, path: Nothing } <$> shim.deps
-              Nothing -> pure { name, path, deps: [], src }
-                where
-                -- Todo - link to instructions for adding shims
-                src = throwJSError $ "FFI dependency not provided: " <> name
+                  deps = { name: _, path: Nothing } <$> shim.deps
+            Nothing -> pure { name, path, deps: [], src }
+              where
+              -- Todo - link to instructions for adding shims
+              src = throwJSError $ "FFI dependency not provided: " <> name
         liftEffect $ putModule name mod
         pure mod
 
   go :: Object JS -> Array Dependency -> Aff (Object JS)
-  go ms []   = pure ms
+  go ms [] = pure ms
+
   go ms deps = do
     modules <- parTraverse load deps
     let

@@ -1,4 +1,4 @@
-Need help adding images to webpack project
+Working webpack example with images, css, ace editor
 
 ```
 npm i
